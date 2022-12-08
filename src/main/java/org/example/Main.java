@@ -117,16 +117,6 @@ class Process{
 class ShortestJobFirstScheduler{
 
     private List<Process> processes;
-    public static  Process getProcessOfMinWaitingTime(List<Process> processes,Integer minBurstValue){
-        List<Process> sameMinBurstProcesses = new ArrayList<Process>();
-        for (int i = 0; i < processes.size(); i++) {
-            if(processes.get(i).getRemainingBurstTime()==minBurstValue){
-                sameMinBurstProcesses.add(processes.get(i));
-            }
-        }
-        Util.sortAccordingToWaitingTime(sameMinBurstProcesses);
-        return  sameMinBurstProcesses.get(0);
-    }
     public static Process getProcessOfMinBurst(List<Process> processes, Integer time){
         List<Process> notDoneProcesses = new ArrayList<Process>();
         for(int i=0;i< processes.size();i++){
@@ -140,7 +130,7 @@ class ShortestJobFirstScheduler{
         }
         Util.sortAccordingToBurstTime(notDoneProcesses);
         if(notDoneProcesses.size()==0){return null;}
-        return  getProcessOfMinWaitingTime(notDoneProcesses,notDoneProcesses.get(0).getRemainingBurstTime());
+        return notDoneProcesses.get(0);
     }
     ShortestJobFirstScheduler(List<Process>sjfProcesses){
         processes=sjfProcesses;
@@ -158,20 +148,15 @@ class ShortestJobFirstScheduler{
         Process previousProcess= new Process();
         while(executing){
             Process p = getProcessOfMinBurst(processes,time);
-            System.out.println("current process: "+p.toString());
-            System.out.println("previous process: "+previousProcess.toString());
             if(time!=0&&previousProcess.getProcessName()!=p.getProcessName()) {
                 for (int i = 0; i < processes.size(); i++) {
                     if (processes.get(i).getDone() == false) {
                         processes.get(i).setIsAt(processes.get(i).getIsAt() + contextSwitch);
-                        System.out.println("SWITCH,Shifting: "+processes.get(i).toString()+" isAt:"+processes.get(i).getIsAt());
                     }
                 }
                 time += contextSwitch;
                 p = getProcessOfMinBurst(processes, time);
-                //System.out.println("Time: "+time+" MIN AFTER SWITCH: "+p.toString()+" isAt:"+p.getIsAt());
             }
-            System.out.println("Time after min fetch: "+time);
             Process tempP = new Process(p.getProcessName(),p.getProcessArrivalTime(),p.getProcessBurstTime(),p.getRemainingBurstTime(),p.getProcessPriority(),p.getIsAt(),p.getWaitingTime(),p.getDone());
             tempP.setRemainingBurstTime(tempP.getRemainingBurstTime()-1);
             processes.set(processes.indexOf(p),tempP);
@@ -185,13 +170,9 @@ class ShortestJobFirstScheduler{
                 }
             }
             previousProcess = new Process(tempP.getProcessName(),tempP.getProcessArrivalTime(),tempP.getProcessBurstTime(),tempP.getRemainingBurstTime(),tempP.getProcessPriority(),tempP.getIsAt(),tempP.getWaitingTime(),tempP.getDone());
-//            if(samePreviousProcess==true){
-//                time++;
-//            }else{//switching
-//                time+=3;
-//            }
+
             time++;
-            System.out.println("Time after time++: "+time);
+
             Boolean isAllDone=true;
             for(int i=0;i<processes.size();i++){
                 if(processes.get(i).getDone()==false){
@@ -227,15 +208,6 @@ class Util{
                     @Override
                     public int compare(Process p1, Process p2) {
                         return p1.getRemainingBurstTime().compareTo(p2.getRemainingBurstTime());
-                    }
-                }
-        );
-    }
-    public static void sortAccordingToWaitingTime(List<Process> processes){
-        Collections.sort(processes, new Comparator<Process>() {
-                    @Override
-                    public int compare(Process p1, Process p2) {
-                        return p1.getWaitingTime().compareTo(p2.getWaitingTime());
                     }
                 }
         );
