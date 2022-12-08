@@ -146,12 +146,32 @@ class ShortestJobFirstScheduler{
         processes=sjfProcesses;
         Util.sortAccordingToArrivalTime(processes);//Sort according to arrival time
     }
-    public List<Process> run(){
+    public void printProcesses(){
+        for (int i = 0; i < processes.size(); i++) {
+            System.out.println(processes.get(i).toString());
+        }
+    }
+    public List<Process> run(Integer contextSwitch){
         Boolean executing= true;
         Integer time =0;
+        Boolean samePreviousProcess=true;
+        Process previousProcess= new Process();
         while(executing){
             Process p = getProcessOfMinBurst(processes,time);
-
+            System.out.println("current process: "+p.toString());
+            System.out.println("previous process: "+previousProcess.toString());
+            if(time!=0&&previousProcess.getProcessName()!=p.getProcessName()) {
+                for (int i = 0; i < processes.size(); i++) {
+                    if (processes.get(i).getDone() == false) {
+                        processes.get(i).setIsAt(processes.get(i).getIsAt() + contextSwitch);
+                        System.out.println("SWITCH,Shifting: "+processes.get(i).toString()+" isAt:"+processes.get(i).getIsAt());
+                    }
+                }
+                time += contextSwitch;
+                p = getProcessOfMinBurst(processes, time);
+                //System.out.println("Time: "+time+" MIN AFTER SWITCH: "+p.toString()+" isAt:"+p.getIsAt());
+            }
+            System.out.println("Time after min fetch: "+time);
             Process tempP = new Process(p.getProcessName(),p.getProcessArrivalTime(),p.getProcessBurstTime(),p.getRemainingBurstTime(),p.getProcessPriority(),p.getIsAt(),p.getWaitingTime(),p.getDone());
             tempP.setRemainingBurstTime(tempP.getRemainingBurstTime()-1);
             processes.set(processes.indexOf(p),tempP);
@@ -164,7 +184,14 @@ class ShortestJobFirstScheduler{
                     processes.get(i).setIsAt(processes.get(i).getIsAt()+1);
                 }
             }
+            previousProcess = new Process(tempP.getProcessName(),tempP.getProcessArrivalTime(),tempP.getProcessBurstTime(),tempP.getRemainingBurstTime(),tempP.getProcessPriority(),tempP.getIsAt(),tempP.getWaitingTime(),tempP.getDone());
+//            if(samePreviousProcess==true){
+//                time++;
+//            }else{//switching
+//                time+=3;
+//            }
             time++;
+            System.out.println("Time after time++: "+time);
             Boolean isAllDone=true;
             for(int i=0;i<processes.size();i++){
                 if(processes.get(i).getDone()==false){
@@ -286,7 +313,7 @@ public class Main {
                     processes.get(i).getDone()));
         }
         ShortestJobFirstScheduler shortestJobFirstScheduler = new ShortestJobFirstScheduler(sjfProcesses);
-        sjfProcesses=shortestJobFirstScheduler.run();
+        sjfProcesses=shortestJobFirstScheduler.run(contextSwitching);
         Float sumOfWaitingTime= 0.0F;
         Float sumOfTurnaroundTime= 0.0F;
         for (int i = 0; i < sjfProcesses.size(); i++) {
