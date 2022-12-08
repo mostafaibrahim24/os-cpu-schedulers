@@ -116,6 +116,7 @@ class Process{
 
 class ShortestJobFirstScheduler{
 
+    private List<Process> processes;
     public static  Process getProcessOfMinWaitingTime(List<Process> processes,Integer minBurstValue){
         List<Process> sameMinBurstProcesses = new ArrayList<Process>();
         for (int i = 0; i < processes.size(); i++) {
@@ -127,13 +128,8 @@ class ShortestJobFirstScheduler{
         return  sameMinBurstProcesses.get(0);
     }
     public static Process getProcessOfMinBurst(List<Process> processes, Integer time){
-        //System.out.println("In getProcessOfMinBurst");
-        //for (int i = 0; i < processes.size(); i++) {
-        //    System.out.println(processes.get(i).toString());
-        //}
         List<Process> notDoneProcesses = new ArrayList<Process>();
         for(int i=0;i< processes.size();i++){
-            //System.out.println("IN LOOP OF MIN BURST: "+processes.get(i).toString());
             if(processes.get(i).getDone()==true){
                 continue;
             }
@@ -146,19 +142,11 @@ class ShortestJobFirstScheduler{
         if(notDoneProcesses.size()==0){return null;}
         return  getProcessOfMinWaitingTime(notDoneProcesses,notDoneProcesses.get(0).getRemainingBurstTime());
     }
-    ShortestJobFirstScheduler(List<Process>processes){
-//        System.out.println("In constructor");
-//        for (int i = 0; i < processes.size(); i++) {
-//            System.out.println(processes.get(i).toString());
-//        }
-
+    ShortestJobFirstScheduler(List<Process>sjfProcesses){
+        processes=sjfProcesses;
         Util.sortAccordingToArrivalTime(processes);//Sort according to arrival time
-
-//       System.out.println("In constructor, after sort according to arrival time");
-//        for (int i = 0; i < processes.size(); i++) {
-//            System.out.println(processes.get(i).toString());
-//       }
-
+    }
+    public List<Process> run(){
         Boolean executing= true;
         Integer time =0;
         while(executing){
@@ -188,40 +176,16 @@ class ShortestJobFirstScheduler{
             }
         }
         for(int i=0;i<processes.size();i++){
-            //System.out.println("Right Before Process print: "+processes.get(i).toString());
-          //processes.get(i).setWaitingTime((processes.get(i).getIsAt()-processes.get(i).getProcessBurstTime())-processes.get(i).getProcessArrivalTime());
-
             Integer tempIsAt=processes.get(i).getIsAt();
             Integer tempArrivalTime=processes.get(i).getProcessArrivalTime();
             Integer tempBurstTime=processes.get(i).getProcessBurstTime();
             processes.get(i).setWaitingTime(tempIsAt-(tempArrivalTime+tempBurstTime));
             processes.get(i).setTurnaroundTime(tempBurstTime+processes.get(i).getWaitingTime());
-            System.out.println("Process print: "+processes.get(i).toString());
         }
-
+        return processes;
     }
 }
 class Util{
-    public static List<Process> extractSameTimeSubarray(List<Process> processes,Integer time, String typeOfExtraction){//To sort according to burst time if they arrived at the same place
-        Process[] arrProcesses = processes.toArray(new Process[processes.size()]);
-        List<Process> sub=new ArrayList<Process>();
-        if(typeOfExtraction=="arrivalTime"){
-            for(int i=0;i<arrProcesses.length;i++){
-                if(arrProcesses[i].getProcessArrivalTime()==time){
-                    sub.add(arrProcesses[i]);
-                }
-            }
-        }
-        else if (typeOfExtraction=="isAt"){
-            for(int i=0;i<arrProcesses.length;i++){
-                if(arrProcesses[i].getIsAt()==time){
-                    sub.add(arrProcesses[i]);
-                }
-            }
-        }
-        return sub;
-
-    }
     public static void sortAccordingToArrivalTime(List<Process> processes){
         Collections.sort(processes, new Comparator<Process>() {
                     @Override
@@ -253,12 +217,12 @@ class Util{
 public class Main {
     public static void main(String[] args) {
 
-        System.out.println("Number of processes: ");
+        System.out.print("Number of processes: ");
         Scanner scanner= new Scanner(System.in);
         int numberOfProcesses = scanner.nextInt();
-        System.out.println("Round robin Time Quantum: ");
+        System.out.print("Round robin Time Quantum: ");
         int roundRobinTimeQuantum = scanner.nextInt();
-        System.out.println("Context switching: ");
+        System.out.print("Context switching: ");
         int contextSwitching = scanner.nextInt();
 
         List<Process> processes = new ArrayList<Process>();
@@ -283,9 +247,60 @@ public class Main {
             process.setWaitingTime(0);
             processes.add(process);
         }
-//        for (int i = 0; i < processes.size(); i++) {
-//            System.out.println(processes.get(i).toString());
-//        }
-        ShortestJobFirstScheduler shortestJobFirstScheduler = new ShortestJobFirstScheduler(processes);
+        List<Process> sjfProcesses = new ArrayList<Process>();
+        List<Process> rrProcesses = new ArrayList<Process>();
+        List<Process> fcfsProcesses = new ArrayList<Process>();
+        List<Process> agProcesses = new ArrayList<Process>();
+        for (int i = 0; i < processes.size(); i++) {
+            sjfProcesses.add(new Process(processes.get(i).getProcessName(),
+                    processes.get(i).getProcessArrivalTime(),
+                    processes.get(i).getProcessBurstTime(),
+                    processes.get(i).getRemainingBurstTime(),
+                    processes.get(i).getProcessPriority(),
+                    processes.get(i).getIsAt(),
+                    processes.get(i).getWaitingTime(),
+                    processes.get(i).getDone()));
+            rrProcesses.add(new Process(processes.get(i).getProcessName(),
+                    processes.get(i).getProcessArrivalTime(),
+                    processes.get(i).getProcessBurstTime(),
+                    processes.get(i).getRemainingBurstTime(),
+                    processes.get(i).getProcessPriority(),
+                    processes.get(i).getIsAt(),
+                    processes.get(i).getWaitingTime(),
+                    processes.get(i).getDone()));
+            fcfsProcesses.add(new Process(processes.get(i).getProcessName(),
+                    processes.get(i).getProcessArrivalTime(),
+                    processes.get(i).getProcessBurstTime(),
+                    processes.get(i).getRemainingBurstTime(),
+                    processes.get(i).getProcessPriority(),
+                    processes.get(i).getIsAt(),
+                    processes.get(i).getWaitingTime(),
+                    processes.get(i).getDone()));
+            agProcesses.add(new Process(processes.get(i).getProcessName(),
+                    processes.get(i).getProcessArrivalTime(),
+                    processes.get(i).getProcessBurstTime(),
+                    processes.get(i).getRemainingBurstTime(),
+                    processes.get(i).getProcessPriority(),
+                    processes.get(i).getIsAt(),
+                    processes.get(i).getWaitingTime(),
+                    processes.get(i).getDone()));
+        }
+        ShortestJobFirstScheduler shortestJobFirstScheduler = new ShortestJobFirstScheduler(sjfProcesses);
+        sjfProcesses=shortestJobFirstScheduler.run();
+        Float sumOfWaitingTime= 0.0F;
+        Float sumOfTurnaroundTime= 0.0F;
+        for (int i = 0; i < sjfProcesses.size(); i++) {
+            System.out.println("Process print: "+sjfProcesses.get(i).toString());
+            sumOfWaitingTime+=sjfProcesses.get(i).getWaitingTime();
+            sumOfTurnaroundTime+=sjfProcesses.get(i).getTurnaroundTime();
+        }
+        //Average waiting time
+        Float averageWaitingTime= sumOfWaitingTime/(float)sjfProcesses.size();
+        System.out.println("Average waiting time: "+averageWaitingTime);
+        //Average turnaround time
+        Float averageTurnaroundTime = sumOfTurnaroundTime/(float)sjfProcesses.size();
+        System.out.println("Average turnaround time: "+averageTurnaroundTime);
+
+
     }
 }
