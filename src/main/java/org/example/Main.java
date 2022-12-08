@@ -146,6 +146,9 @@ class ShortestJobFirstScheduler{
         Integer time =0;
         Boolean samePreviousProcess=true;
         Process previousProcess= new Process();
+        String executionOrder="";
+        System.out.println("-------------------SJF (execution info)-------------------");
+        System.out.println("Process executed at each unit time:");
         while(executing){
             Process p = getProcessOfMinBurst(processes,time);
             if(time!=0&&previousProcess.getProcessName()!=p.getProcessName()) {
@@ -158,11 +161,13 @@ class ShortestJobFirstScheduler{
                 p = getProcessOfMinBurst(processes, time);
             }
             Process tempP = new Process(p.getProcessName(),p.getProcessArrivalTime(),p.getProcessBurstTime(),p.getRemainingBurstTime(),p.getProcessPriority(),p.getIsAt(),p.getWaitingTime(),p.getDone());
+            System.out.println(tempP.getProcessName()+" is executing");
             tempP.setRemainingBurstTime(tempP.getRemainingBurstTime()-1);
             processes.set(processes.indexOf(p),tempP);
             if(processes.get(processes.indexOf(tempP)).getRemainingBurstTime()==0){
                 processes.get(processes.indexOf(tempP)).setDone(true);
                 processes.get(processes.indexOf(tempP)).setIsAt(processes.get(processes.indexOf(tempP)).getIsAt()+1);
+                executionOrder= executionOrder+" "+processes.get(processes.indexOf(tempP)).getProcessName()+" ";
             }
             for(int i=0;i<processes.size();i++){
                 if(processes.get(i).getDone()==false && processes.get(i).getIsAt()==time){
@@ -190,6 +195,7 @@ class ShortestJobFirstScheduler{
             processes.get(i).setWaitingTime(tempIsAt-(tempArrivalTime+tempBurstTime));
             processes.get(i).setTurnaroundTime(tempBurstTime+processes.get(i).getWaitingTime());
         }
+        System.out.println("Execution order (=>): "+executionOrder);
         return processes;
     }
 }
