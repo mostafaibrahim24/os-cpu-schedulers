@@ -231,7 +231,7 @@ class AGScheduler{
 //        }
         Boolean executing = true;
         Integer time=0;
-        readyQueue.add(processes.get(0));
+        readyQueue.add(processes.get(0));//multiple
         Process previousProcess = new Process("",null,null,null,null,null,null,null);
         Process currentProcess = new Process();
         Boolean isFCFS = true;
@@ -249,6 +249,8 @@ class AGScheduler{
         List<String> historyOfQuantumAllProcessesForPrint= new ArrayList<String>();
         historyOfQuantumAllProcessesForPrint.add(historyOfQuantum);
         historyOfQuantum="";
+        System.out.println("----------------------AG (execution info)----------------------");
+        System.out.println("Process executed:");
         while(executing){
             if(allAreProcessesAreDone()){
                 executing=false;
@@ -263,6 +265,7 @@ class AGScheduler{
                 //System.out.println("fcfs's process: "+currentProcess.getProcessName()+" its quantum: "+currentProcess.getQuantum());
             }
             if(previousProcess.getProcessName()!=currentProcess.getProcessName()){
+                System.out.println(currentProcess.getProcessName()+" is executing");
 //                if(currentProcess.getRemainingBurstTime()==0){
 //                    isFCFS=true;
 //                    processes.get(processes.indexOf(currentProcess)).setDone(true);
@@ -293,9 +296,20 @@ class AGScheduler{
                 Integer remainingQuantum=currentProcess.getQuantum()-((int) Math.ceil(((float)currentProcess.getQuantum())*0.25));
                 //System.out.println("time: "+time+", "+currentProcess.getProcessName()+", Remaining Quantum (in 25%)= "+remainingQuantum);
                 currentProcess.setRemainingBurstTime(currentProcess.getRemainingBurstTime()-((int) Math.ceil(((float)currentProcess.getQuantum())*0.25)));
+                /////////////////////////////
+                if(currentProcess.getRemainingBurstTime()<0){
+                    Integer tempCompense=0;
+                    while(currentProcess.getRemainingBurstTime()!=0){
+                        tempCompense+=1;
+                        currentProcess.setRemainingBurstTime(currentProcess.getRemainingBurstTime()+1);
+                    }
+                    time-=(int) Math.ceil(((float)currentProcess.getQuantum())*0.25);
+                    time+=tempCompense;
+                }
+                /////////////////////////////
                 //System.out.println("Before if(currentProcess.getRemainingBurstTime()<=0)");
                 //System.out.println("Process name:"+currentProcess.getProcessName()+" ,Remaining burst: "+currentProcess.getRemainingBurstTime());
-                if(currentProcess.getRemainingBurstTime()<=0){
+                if(currentProcess.getRemainingBurstTime()==0){
                     isFCFS=true;
                     processes.get(processes.indexOf(currentProcess)).setDone(true);
                     processes.get(processes.indexOf(currentProcess)).setQuantum(0);
@@ -303,6 +317,7 @@ class AGScheduler{
                     //readyQueue.remove(currentProcess);
                     removeFromReadyQueue(currentProcess);
                     previousProcess=currentProcess;
+                    currentProcess.setIsAt(time);
                     exeOrder.add(currentProcess.getProcessName());
                     continue;
                 }
@@ -330,8 +345,18 @@ class AGScheduler{
                 remainingQuantum=currentProcess.getQuantum()-((int) Math.ceil(((float)currentProcess.getQuantum())*0.5));
                 //System.out.println("time: "+time+" ,"+currentProcess.getProcessName()+", Remaining Quantum (in 50%)= "+remainingQuantum);
                 currentProcess.setRemainingBurstTime(currentProcess.getRemainingBurstTime()-((int) Math.ceil(((float)currentProcess.getQuantum())*0.5)));
-
-                if(currentProcess.getRemainingBurstTime()<=0){
+                /////////////////////////////
+                if(currentProcess.getRemainingBurstTime()<0){
+                    Integer tempCompense=0;
+                    while(currentProcess.getRemainingBurstTime()!=0){
+                        tempCompense+=1;
+                        currentProcess.setRemainingBurstTime(currentProcess.getRemainingBurstTime()+1);
+                    }
+                    time-=(int) Math.ceil(((float)currentProcess.getQuantum())*0.25);
+                    time+=tempCompense;
+                }
+                /////////////////////////////
+                if(currentProcess.getRemainingBurstTime()==0){
                     isFCFS=true;
                     processes.get(processes.indexOf(currentProcess)).setDone(true);
                     processes.get(processes.indexOf(currentProcess)).setQuantum(0);
@@ -339,6 +364,7 @@ class AGScheduler{
                     //readyQueue.remove(currentProcess);
                     removeFromReadyQueue(currentProcess);
                     previousProcess=currentProcess;
+                    currentProcess.setIsAt(time);
                     exeOrder.add(currentProcess.getProcessName());
                     continue;
                 }
@@ -355,7 +381,60 @@ class AGScheduler{
                     isFCFS=false;
                     continue;
                 }
-                currentProcess=minBurstProcess;//same process so sjf it, time++ till remaining quantum==0
+                currentProcess=minBurstProcess;//same process so sjf it,
+                // time++ till remaining quantum==0 and if remaining burst !=0 then add 2 to quantum and add it to the end of the queue
+                //beyond 50%
+                boolean isSJF=true;
+                while(remainingQuantum>0){
+                    startTime=time;
+                    time+=1;
+                    checkForArrivals(startTime,time);
+                    remainingQuantum=remainingQuantum-1;
+                    currentProcess.setRemainingBurstTime(currentProcess.getRemainingBurstTime()-1);
+
+                    if(currentProcess.getRemainingBurstTime()<0){
+                        Integer tempCompense=0;
+                        while(currentProcess.getRemainingBurstTime()!=0){
+                            tempCompense+=1;
+                            currentProcess.setRemainingBurstTime(currentProcess.getRemainingBurstTime()+1);
+                        }
+                        time-=(int) Math.ceil(((float)currentProcess.getQuantum())*0.25);
+                        time+=tempCompense;
+                    }
+                    //#1
+                    if(currentProcess.getRemainingBurstTime()==0){
+                        isFCFS=true;
+                        processes.get(processes.indexOf(currentProcess)).setDone(true);
+                        processes.get(processes.indexOf(currentProcess)).setQuantum(0);
+                        processes.get(processes.indexOf(currentProcess)).setRemainingBurstTime(0);
+                        removeFromReadyQueue(currentProcess);
+                        previousProcess=currentProcess;
+                        currentProcess.setIsAt(time);
+                        exeOrder.add(currentProcess.getProcessName());
+                        isSJF=false;//break, continue
+                        break;
+                    }
+
+                    //#2
+                    minBurstProcess = getProcessOfMinBurst(time);
+                    if(currentProcess.getProcessName()!=minBurstProcess.getProcessName()){
+                        previousProcess=currentProcess;
+                        currentProcess=minBurstProcess;
+                        isFCFS=false;
+                        isSJF=false;
+                        break;
+                    }
+                    if(isSJF==false){break;}
+                }
+                if(isSJF==false){continue;}
+                if(currentProcess.getRemainingBurstTime()>0 && remainingQuantum<=0){
+                    //add 2 to quantum and add it to the end of the queue
+                    currentProcess.setQuantum(currentProcess.getQuantum()+2);
+                    removeFromReadyQueue(currentProcess);
+                    readyQueue.add(currentProcess);
+                    isFCFS=true;
+                    continue;
+                }
                 previousProcess=new Process("End",null,null,null,null,null,null,null);
                 isFCFS=false;
 
@@ -367,14 +446,34 @@ class AGScheduler{
 //        }
         System.out.print("Execution order (=>):");
         for (int i = 0; i < exeOrder.size(); i++) {
-            System.out.println(" "+exeOrder.get(i));
+            System.out.print(" "+exeOrder.get(i));
         }
+        System.out.print("\n");
         historyOfQuantumAllProcessesForPrint = new ArrayList<String>(new LinkedHashSet<String>(historyOfQuantumAllProcessesForPrint));
         for (int i = 0; i < historyOfQuantumAllProcessesForPrint.size(); i++) {
             historyOfQuantum=historyOfQuantumAllProcessesForPrint.get(i);
             System.out.println(historyOfQuantum);
-
         }
+        for(int i=0;i<processes.size();i++){
+            Integer tempIsAt=processes.get(i).getIsAt();
+            Integer tempArrivalTime=processes.get(i).getProcessArrivalTime();
+            Integer tempBurstTime=processes.get(i).getProcessBurstTime();
+            processes.get(i).setWaitingTime(tempIsAt-(tempArrivalTime+tempBurstTime));
+            processes.get(i).setTurnaroundTime(tempBurstTime+processes.get(i).getWaitingTime());
+            System.out.println("Process print: "+processes.get(i).toString());
+        }
+        Float sumOfWaitingTime= 0.0F;
+        Float sumOfTurnaroundTime= 0.0F;
+        for (int i = 0; i < processes.size(); i++) {
+            sumOfWaitingTime+=processes.get(i).getWaitingTime();
+            sumOfTurnaroundTime+=processes.get(i).getTurnaroundTime();
+        }
+        //Average waiting time
+        Float averageWaitingTime= sumOfWaitingTime/(float)processes.size();
+        System.out.println("Average waiting time: "+averageWaitingTime);
+        //Average turnaround time
+        Float averageTurnaroundTime = sumOfTurnaroundTime/(float)processes.size();
+        System.out.println("Average turnaround time: "+averageTurnaroundTime);
     }
 
     private void removeFromReadyQueue(Process currentProcess) {
