@@ -13,6 +13,16 @@ class Process{
 
     private  Integer turnaroundTime;
 
+    private Integer quantum;
+
+    public Integer getQuantum() {
+        return quantum;
+    }
+
+    public void setQuantum(Integer quantum) {
+        this.quantum = quantum;
+    }
+
     public Integer getTurnaroundTime() {
         return turnaroundTime;
     }
@@ -110,6 +120,8 @@ class Process{
                 ", processPriority=" + processPriority +
                 ", waitingTime=" + waitingTime +
                 ", turnaroundTime=" + turnaroundTime +
+                ", isDone="+isDone+
+                ", quantum="+quantum+
                 '}';
     }
 }
@@ -199,6 +211,236 @@ class ShortestJobFirstScheduler{
         return processes;
     }
 }
+class AGScheduler{
+    private List<Process> processes;
+    private Queue<Process> readyQueue;
+    public AGScheduler(List<Process>agProcesses) {
+        List<String> exeOrder= new ArrayList<String>();
+        System.out.println("----------------------AG----------------------");
+        Scanner scanner= new Scanner(System.in);
+        for (int i = 0; i < agProcesses.size(); i++) {
+            System.out.print("Process "+ (i+1) +" quantum: ");
+            agProcesses.get(i).setQuantum(scanner.nextInt());
+        }
+        Util.sortAccordingToArrivalTime(agProcesses);
+        processes = agProcesses;
+
+        readyQueue = new LinkedList<Process>();
+//        for (int i = 0; i < processes.size(); i++) {
+//            readyQueue.add(processes.get(i));
+//        }
+        Boolean executing = true;
+        Integer time=0;
+        readyQueue.add(processes.get(0));
+        Process previousProcess = new Process("",null,null,null,null,null,null,null);
+        Process currentProcess = new Process();
+        Boolean isFCFS = true;
+        String historyOfQuantum="";
+        historyOfQuantum+="Quantum (";
+        for (int i = 0; i < processes.size(); i++) {
+            if(i==processes.size()-1){
+//                        System.out.print(processes.get(i).getQuantum()+")");
+                historyOfQuantum+=(processes.get(i).getQuantum()+")");
+                continue;
+            }
+//                    System.out.print(processes.get(i).getQuantum()+",");
+            historyOfQuantum+=(processes.get(i).getQuantum()+",");
+        }
+        List<String> historyOfQuantumAllProcessesForPrint= new ArrayList<String>();
+        historyOfQuantumAllProcessesForPrint.add(historyOfQuantum);
+        historyOfQuantum="";
+        while(executing){
+            if(allAreProcessesAreDone()){
+                executing=false;
+                break;
+            }
+            if(isFCFS==true){
+                //System.out.println("FCFS, "+time);
+
+                //System.out.println("\n Ready Queue: "+readyQueue.toString());
+                currentProcess=readyQueue.remove();
+                //System.out.println("FCFS: current:"+currentProcess.getProcessName()+" , previous:"+previousProcess.getProcessName());
+                //System.out.println("fcfs's process: "+currentProcess.getProcessName()+" its quantum: "+currentProcess.getQuantum());
+            }
+            if(previousProcess.getProcessName()!=currentProcess.getProcessName()){
+//                if(currentProcess.getRemainingBurstTime()==0){
+//                    isFCFS=true;
+//                    processes.get(processes.indexOf(currentProcess)).setDone(true);
+//                    readyQueue.remove(currentProcess);
+//                    continue;
+//                }
+
+//                System.out.print("Quantum (");
+                historyOfQuantum+="Quantum (";
+                for (int i = 0; i < processes.size(); i++) {
+                    if(i==processes.size()-1){
+//                        System.out.print(processes.get(i).getQuantum()+")");
+                        historyOfQuantum+=(processes.get(i).getQuantum()+")");
+                        continue;
+                    }
+//                    System.out.print(processes.get(i).getQuantum()+",");
+                    historyOfQuantum+=(processes.get(i).getQuantum()+",");
+                }
+//                System.out.println("\n-----");
+                //historyOfQuantum+="\n-----\n";
+                historyOfQuantumAllProcessesForPrint.add(historyOfQuantum);
+                historyOfQuantum="";
+
+                //25% uninterrupted when new process
+                Integer startTime=time;
+                time+=(int) Math.ceil(((float)currentProcess.getQuantum())*0.25);
+                checkForArrivals(startTime,time);
+                Integer remainingQuantum=currentProcess.getQuantum()-((int) Math.ceil(((float)currentProcess.getQuantum())*0.25));
+                //System.out.println("time: "+time+", "+currentProcess.getProcessName()+", Remaining Quantum (in 25%)= "+remainingQuantum);
+                currentProcess.setRemainingBurstTime(currentProcess.getRemainingBurstTime()-((int) Math.ceil(((float)currentProcess.getQuantum())*0.25)));
+                //System.out.println("Before if(currentProcess.getRemainingBurstTime()<=0)");
+                //System.out.println("Process name:"+currentProcess.getProcessName()+" ,Remaining burst: "+currentProcess.getRemainingBurstTime());
+                if(currentProcess.getRemainingBurstTime()<=0){
+                    isFCFS=true;
+                    processes.get(processes.indexOf(currentProcess)).setDone(true);
+                    processes.get(processes.indexOf(currentProcess)).setQuantum(0);
+                    processes.get(processes.indexOf(currentProcess)).setRemainingBurstTime(0);
+                    //readyQueue.remove(currentProcess);
+                    removeFromReadyQueue(currentProcess);
+                    previousProcess=currentProcess;
+                    exeOrder.add(currentProcess.getProcessName());
+                    continue;
+                }
+                //System.out.println("After if(currentProcess.getRemainingBurstTime()<=0)");
+                //50% non-preemptive priority
+                Process highPriorityProcess = getHighestPriorityProcess(time); //inside uses readyQueue NO NOT FROM QUEUE, HIGHEST PRIORITY OF THAT TIME
+                if(currentProcess.getProcessName()!=highPriorityProcess.getProcessName()){
+                    currentProcess.setQuantum((int) Math.ceil(((double) currentProcess.getQuantum()+ ((double) remainingQuantum)/2)));
+                    //System.out.println("non-pre priority switch: current:"+currentProcess.getProcessName()+" , minBurst:"+highPriorityProcess.getProcessName());
+                    removeFromReadyQueue(currentProcess);
+                    readyQueue.add(currentProcess);
+                    //System.out.println("Ready Queue in non-pre priority switch: "+readyQueue);
+                    previousProcess=currentProcess;
+                    currentProcess=highPriorityProcess;
+                    isFCFS=false;
+                    continue;
+                }
+                currentProcess=highPriorityProcess;
+                    //The actual stuff 50%
+                time-=(int) Math.ceil(((float)currentProcess.getQuantum())*0.25);
+                currentProcess.setRemainingBurstTime(currentProcess.getRemainingBurstTime()+((int) Math.ceil(((float)currentProcess.getQuantum())*0.25)));
+                startTime=time;
+                time+=(int) Math.ceil(((float)currentProcess.getQuantum())*0.5);
+                checkForArrivals(startTime,time);
+                remainingQuantum=currentProcess.getQuantum()-((int) Math.ceil(((float)currentProcess.getQuantum())*0.5));
+                //System.out.println("time: "+time+" ,"+currentProcess.getProcessName()+", Remaining Quantum (in 50%)= "+remainingQuantum);
+                currentProcess.setRemainingBurstTime(currentProcess.getRemainingBurstTime()-((int) Math.ceil(((float)currentProcess.getQuantum())*0.5)));
+
+                if(currentProcess.getRemainingBurstTime()<=0){
+                    isFCFS=true;
+                    processes.get(processes.indexOf(currentProcess)).setDone(true);
+                    processes.get(processes.indexOf(currentProcess)).setQuantum(0);
+                    processes.get(processes.indexOf(currentProcess)).setRemainingBurstTime(0);
+                    //readyQueue.remove(currentProcess);
+                    removeFromReadyQueue(currentProcess);
+                    previousProcess=currentProcess;
+                    exeOrder.add(currentProcess.getProcessName());
+                    continue;
+                }
+                //Check SWITCH FROM SJF (In example, no one continues), just for now
+                Process minBurstProcess = getProcessOfMinBurst(time);
+                if(currentProcess.getProcessName()!=minBurstProcess.getProcessName()){
+                    currentProcess.setQuantum((int) Math.ceil(((double) currentProcess.getQuantum()+ (double) remainingQuantum)));
+                    //System.out.println("SJF switch: current:"+currentProcess.getProcessName()+" , minBurst:"+minBurstProcess.getProcessName());
+                    removeFromReadyQueue(currentProcess);
+                    readyQueue.add(currentProcess);
+                    //System.out.println("Ready Queue in sjf switch: "+readyQueue);
+                    previousProcess=currentProcess;
+                    currentProcess=minBurstProcess;
+                    isFCFS=false;
+                    continue;
+                }
+                currentProcess=minBurstProcess;//same process so sjf it, time++ till remaining quantum==0
+                previousProcess=new Process("End",null,null,null,null,null,null,null);
+                isFCFS=false;
+
+            }
+        }
+//        System.out.println("After execution");
+//        for (int i = 0; i < processes.size(); i++) {
+//            System.out.println(processes.get(i).toString());
+//        }
+        System.out.print("Execution order (=>):");
+        for (int i = 0; i < exeOrder.size(); i++) {
+            System.out.println(" "+exeOrder.get(i));
+        }
+        historyOfQuantumAllProcessesForPrint = new ArrayList<String>(new LinkedHashSet<String>(historyOfQuantumAllProcessesForPrint));
+        for (int i = 0; i < historyOfQuantumAllProcessesForPrint.size(); i++) {
+            historyOfQuantum=historyOfQuantumAllProcessesForPrint.get(i);
+            System.out.println(historyOfQuantum);
+
+        }
+    }
+
+    private void removeFromReadyQueue(Process currentProcess) {
+        Queue<Process> cpRQ= new LinkedList<Process>(readyQueue);
+        Queue<Process> updatedRQ= new LinkedList<Process>();
+        while(!cpRQ.isEmpty()){
+            if(cpRQ.peek().getProcessName()==currentProcess.getProcessName()){
+                cpRQ.remove();
+                continue;
+            }
+            updatedRQ.add(cpRQ.remove());
+        }
+        readyQueue =updatedRQ;
+    }
+
+    private boolean allAreProcessesAreDone() {
+        boolean allDone=true;
+        for (int i = 0; i < processes.size(); i++) {
+            if(processes.get(i).getDone()==false){
+                allDone=false;
+                return allDone;
+            }
+        }
+        return allDone;
+    }
+
+    private void checkForArrivals(Integer beforeTimeIncrement, Integer time) {
+//        for (int i = beforeTimeIncrement; i <= time; i++) {
+//            if(processes)
+//            readyQueue.add(processes.get(i));
+//        }
+        for (int i = 0; i < processes.size(); i++) {
+            if(processes.get(i).getProcessArrivalTime()>beforeTimeIncrement && processes.get(i).getProcessArrivalTime()<=time){
+                readyQueue.add(processes.get(i));
+            }
+        }
+    }
+
+    private Process getHighestPriorityProcess(Integer time) {
+        Process hp = new Process("",null,null,null,Integer.MAX_VALUE,null,null,null);
+        for (int i = 0; i < processes.size(); i++) {
+            if(processes.get(i).getDone()==false && processes.get(i).getProcessArrivalTime()<=time){
+                if(processes.get(i).getProcessPriority()< hp.getProcessPriority()){
+                    hp=processes.get(i);
+                }
+            }
+        }
+        //System.out.println("Highest priority: "+hp.getProcessName()+" ,priority:"+hp.getProcessPriority());
+        return hp;
+    }
+    private Process getProcessOfMinBurst(Integer time){
+        List<Process> notDoneProcesses = new ArrayList<Process>();
+        for(int i=0;i< processes.size();i++){
+            if(processes.get(i).getDone()==true){
+                continue;
+            }
+            if(processes.get(i).getIsAt()<=time) {
+                notDoneProcesses.add(processes.get(i));
+            }
+        }
+        Util.sortAccordingToBurstTime(notDoneProcesses);
+        if(notDoneProcesses.size()==0){return null;}
+        //System.out.println("Min burst process: "+notDoneProcesses.get(0).getProcessName()+" ,remaining burst time:"+notDoneProcesses.get(0).getRemainingBurstTime());
+        return notDoneProcesses.get(0);
+    }
+}
 class Util{
     public static void sortAccordingToArrivalTime(List<Process> processes){
         Collections.sort(processes, new Comparator<Process>() {
@@ -219,6 +461,7 @@ class Util{
         );
     }
 }
+
 public class Main {
     public static void main(String[] args) {
 
@@ -245,8 +488,8 @@ public class Main {
             process.setProcessBurstTime(scanner.nextInt());
             process.setRemainingBurstTime(process.getProcessBurstTime());
 
-            //System.out.print("Process "+ (i+1) +" priority: ");
-            //process.setProcessPriority(scanner.nextInt());
+            System.out.print("Process "+ (i+1) +" priority: ");
+            process.setProcessPriority(scanner.nextInt());
 
             process.setDone(false);
             process.setWaitingTime(0);
@@ -305,6 +548,8 @@ public class Main {
         //Average turnaround time
         Float averageTurnaroundTime = sumOfTurnaroundTime/(float)sjfProcesses.size();
         System.out.println("Average turnaround time: "+averageTurnaroundTime);
+
+        AGScheduler agScheduler = new AGScheduler(agProcesses);
 
 
     }
