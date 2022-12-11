@@ -156,7 +156,6 @@ class ShortestJobFirstScheduler{
     public List<Process> run(Integer contextSwitch){
         Boolean executing= true;
         Integer time =0;
-        Boolean samePreviousProcess=true;
         Process previousProcess= new Process();
         String executionOrder="";
         System.out.println("-------------------SJF (execution info)-------------------");
@@ -215,7 +214,7 @@ class AGScheduler{
     private List<Process> processes;
     private Queue<Process> readyQueue;
     public AGScheduler(List<Process>agProcesses) {
-        List<String> exeOrder= new ArrayList<String>();
+
         System.out.println("----------------------AG----------------------");
         Scanner scanner= new Scanner(System.in);
         for (int i = 0; i < agProcesses.size(); i++) {
@@ -226,9 +225,14 @@ class AGScheduler{
         processes = agProcesses;
 
         readyQueue = new LinkedList<Process>();
-//        for (int i = 0; i < processes.size(); i++) {
+
+    }
+
+    public List<Process> run(){
+        //        for (int i = 0; i < processes.size(); i++) {
 //            readyQueue.add(processes.get(i));
 //        }
+        List<String> exeOrder= new ArrayList<String>();
         Boolean executing = true;
         Integer time=0;
         readyQueue.add(processes.get(0));//multiple
@@ -336,7 +340,7 @@ class AGScheduler{
                     continue;
                 }
                 currentProcess=highPriorityProcess;
-                    //The actual stuff 50%
+                //The actual stuff 50%
                 time-=(int) Math.ceil(((float)currentProcess.getQuantum())*0.25);
                 currentProcess.setRemainingBurstTime(currentProcess.getRemainingBurstTime()+((int) Math.ceil(((float)currentProcess.getQuantum())*0.25)));
                 startTime=time;
@@ -460,22 +464,10 @@ class AGScheduler{
             Integer tempBurstTime=processes.get(i).getProcessBurstTime();
             processes.get(i).setWaitingTime(tempIsAt-(tempArrivalTime+tempBurstTime));
             processes.get(i).setTurnaroundTime(tempBurstTime+processes.get(i).getWaitingTime());
-            System.out.println("Process print: "+processes.get(i).toString());
+            //System.out.println("Process print: "+processes.get(i).toString());
         }
-        Float sumOfWaitingTime= 0.0F;
-        Float sumOfTurnaroundTime= 0.0F;
-        for (int i = 0; i < processes.size(); i++) {
-            sumOfWaitingTime+=processes.get(i).getWaitingTime();
-            sumOfTurnaroundTime+=processes.get(i).getTurnaroundTime();
-        }
-        //Average waiting time
-        Float averageWaitingTime= sumOfWaitingTime/(float)processes.size();
-        System.out.println("Average waiting time: "+averageWaitingTime);
-        //Average turnaround time
-        Float averageTurnaroundTime = sumOfTurnaroundTime/(float)processes.size();
-        System.out.println("Average turnaround time: "+averageTurnaroundTime);
+        return processes;
     }
-
     private void removeFromReadyQueue(Process currentProcess) {
         Queue<Process> cpRQ= new LinkedList<Process>(readyQueue);
         Queue<Process> updatedRQ= new LinkedList<Process>();
@@ -649,7 +641,20 @@ public class Main {
         System.out.println("Average turnaround time: "+averageTurnaroundTime);
 
         AGScheduler agScheduler = new AGScheduler(agProcesses);
-
+        agProcesses=agScheduler.run();
+        Float sumOfWaitingTimeAG= 0.0F;
+        Float sumOfTurnaroundTimeAG= 0.0F;
+        for (int i = 0; i < agProcesses.size(); i++) {
+            System.out.println("Process print: "+agProcesses.get(i).toString());
+            sumOfWaitingTimeAG+=agProcesses.get(i).getWaitingTime();
+            sumOfTurnaroundTimeAG+=agProcesses.get(i).getTurnaroundTime();
+        }
+        //Average waiting time
+        Float averageWaitingTimeAG= sumOfWaitingTimeAG/(float)agProcesses.size();
+        System.out.println("Average waiting time: "+averageWaitingTimeAG);
+        //Average turnaround time
+        Float averageTurnaroundTimeAG = sumOfTurnaroundTimeAG/(float)agProcesses.size();
+        System.out.println("Average turnaround time: "+averageTurnaroundTimeAG);
 
     }
 }
